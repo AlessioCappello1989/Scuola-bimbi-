@@ -31,6 +31,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .d{min-width:54px;text-align:center;border-radius:10px;background:var(--bg);padding:6px 4px;font-size:.8rem}.d b{display:block;font-size:1.25rem}
 .t{font-weight:700}
 .mut{color:var(--mut);font-size:.88rem}
+.tag.k{background:var(--acc);color:var(--accink);border-color:var(--acc)}
 .tag{display:inline-block;font-size:.75rem;border:1px solid var(--line);border-radius:20px;padding:1px 8px;margin-right:4px}
 .soon{color:var(--warn);font-weight:700}
 .btn{background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer;width:100%;margin-top:8px}
@@ -53,7 +54,8 @@ label.c{display:flex;align-items:center;margin:8px 0;font-size:.95rem;color:var(
 <body>
 <h1>📅 Agenda Famiglia</h1>
 <div id="alerts"></div>
-<div class="kids" id="cats"></div>
+<div class="kids" id="kids"></div>
+<div class="kids" id="cats" style="margin-top:6px"></div>
 <div class="tabs" id="tabs"></div>
 <div id="view"></div>
 <div id="dlg"></div>
@@ -61,8 +63,8 @@ label.c{display:flex;align-items:center;margin:8px 0;font-size:.95rem;color:var(
 <div class="note tip"><b>Come non perdere i dati</b><br>I dati sono salvati solo su questo telefono, nel browser. Quando cancelli i dati di navigazione (Chrome: Impostazioni, Privacy e sicurezza, Elimina dati di navigazione), <b>togli la spunta da «Cookie e dati dei siti»</b>: se la lasci attiva, il browser cancella tutti gli eventi salvati nell'app.<br>Per sicurezza, salva ogni tanto un backup: premi «Backup dati», copia il testo e incollalo in un blocco note. Per avere gli stessi eventi sul telefono di tuo marito/tua moglie, incolla lo stesso testo di backup anche lì.</div>
 <script>
 var CATS=['🏫 Scuola','🚌 Gita','⚽ Sport','📌 Altro'];
-var S={events:[],ack:{}},tab='prossimi',flt='',storeOK=true,beeped={};
-try{var raw=localStorage.getItem('agf');if(raw){var p=JSON.parse(raw);if(p&&p.events)S={events:p.events,ack:p.ack||{}}}}catch(e){}
+var S={kids:[],events:[],ack:{}},tab='prossimi',flt='',kflt='',storeOK=true,beeped={};
+try{var raw=localStorage.getItem('agf');if(raw){var p=JSON.parse(raw);if(p&&p.events)S={kids:p.kids||[],events:p.events,ack:p.ack||{}}}}catch(e){}
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 function save(){try{localStorage.setItem('agf',JSON.stringify(S));storeOK=true}catch(e){storeOK=false}}
 function $(i){return document.getElementById(i)}
@@ -89,13 +91,26 @@ function dlg(html,ok,label,noCancel){$('dlg').innerHTML='<div class="mb"><div cl
 function info(m){dlg(esc(m),null,'OK',1)}
 
 /* backup */
-function backup(){var j=JSON.stringify({events:S.events});
+function backup(){var j=JSON.stringify({kids:S.kids,events:S.events});
  dlg('<b>Backup dati</b><p class="mut">Copia questo testo e conservalo (ad esempio nelle note). Per ripristinare, o per avere gli stessi eventi su un altro telefono, incollalo qui sotto al posto di questo testo e premi «Ripristina».</p><textarea id="bk" rows="6" style="font-size:.75rem">'+esc(j)+'</textarea><button class="btn ghost" onclick="var t=$(\'bk\');t.select();try{navigator.clipboard.writeText(t.value)}catch(e){try{document.execCommand(\'copy\')}catch(x){}}this.textContent=\'Copiato\'">Copia testo</button>',
- function(){try{var d=JSON.parse($('bk').value);if(!d||!Array.isArray(d.events))throw 0;S={events:d.events,ack:{}};save();render()}catch(e){info('Testo di backup non valido.');return false}},'Ripristina')}
+ function(){try{var d=JSON.parse($('bk').value);if(!d||!Array.isArray(d.events))throw 0;S={kids:Array.isArray(d.kids)?d.kids:[],events:d.events,ack:{}};kflt='';save();render()}catch(e){info('Testo di backup non valido.');return false}},'Ripristina')}
+
+/* bambini */
+function kidName(id){var k=S.kids.find(function(x){return x.id==id});return k?k.name:''}
+function addKid(){dlg('<b>Nuovo bambino</b><label>Nome</label><input id="kn" maxlength="30" placeholder="Nome" autocomplete="off"><div class="bad" id="ke"></div>',
+ function(){var n=$('kn').value.trim();if(!n){$('ke').textContent='Inserisci il nome.';return false}
+  if(S.kids.some(function(k){return k.name.toLowerCase()==n.toLowerCase()})){$('ke').textContent='Esiste già un bambino con questo nome.';return false}
+  var k={id:uid(),name:n};S.kids.push(k);kflt=k.id;save();render()},'Aggiungi')}
+function editKid(id){var k=S.kids.find(function(x){return x.id==id});if(!k)return;
+ dlg('<b>Modifica '+esc(k.name)+'</b><label>Nome</label><input id="kn" maxlength="30" value="'+esc(k.name)+'"><div class="bad" id="ke"></div><button class="btn ghost" style="color:var(--bad)" onclick="delKid(\''+k.id+'\')">Elimina questo bambino</button>',
+ function(){var n=$('kn').value.trim();if(!n){$('ke').textContent='Inserisci il nome.';return false}k.name=n;save();render()},'Salva')}
+function delKid(id){var k=S.kids.find(function(x){return x.id==id});if(!k)return;var n=S.events.filter(function(e){return e.kid==id}).length;
+ dlg('Eliminare <b>'+esc(k.name)+'</b>?'+(n?'<p class="mut">I suoi '+n+' eventi non vengono cancellati: passano a «Tutti i bambini».</p>':''),function(){
+  S.events.forEach(function(e){if(e.kid==id)e.kid=''});S.kids=S.kids.filter(function(x){return x.id!=id});if(kflt==id)kflt='';save();render()},'Elimina')}
 
 /* eventi */
-function evForm(id){var e=S.events.find(function(x){return x.id==id})||{title:'',date:today(),time:'',cat:CATS[0],notes:'',rec:false,until:''};
- dlg('<b>'+(id?'Modifica evento':'Nuovo evento')+'</b><label>Cosa</label><input id="ft" maxlength="120" placeholder="Es. Assemblea di classe" autocomplete="off" value="'+esc(e.title)+'">'
+function evForm(id){var e=S.events.find(function(x){return x.id==id})||{title:'',date:today(),time:'',cat:CATS[0],notes:'',rec:false,until:'',kid:kflt};
+ dlg('<b>'+(id?'Modifica evento':'Nuovo evento')+'</b><label>Per chi</label><select id="fk"><option value="">👨‍👩‍👧 Tutti i bambini</option>'+S.kids.map(function(k){return '<option value="'+esc(k.id)+'"'+(k.id==e.kid?' selected':'')+'>'+esc(k.name)+'</option>'}).join('')+'</select><label>Cosa</label><input id="ft" maxlength="120" placeholder="Es. Assemblea di classe" autocomplete="off" value="'+esc(e.title)+'">'
  +'<div class="g2"><div><label>Data</label><input id="fd" type="date" value="'+esc(e.date)+'"></div><div><label>Ora (facoltativa)</label><input id="fo" type="time" value="'+esc(e.time||'')+'"></div></div>'
  +'<label>Categoria</label><select id="fc">'+CATS.map(function(c){return '<option'+(c==e.cat?' selected':'')+'>'+c+'</option>'}).join('')+'</select>'
  +'<label class="c"><input type="checkbox" id="fr"'+(e.rec?' checked':'')+' onchange="$(\'fu\').style.display=this.checked?\'block\':\'none\'">🔁 Si ripete ogni settimana (stesso giorno)</label>'
@@ -104,7 +119,7 @@ function evForm(id){var e=S.events.find(function(x){return x.id==id})||{title:''
  function(){var t=$('ft').value.trim(),d=$('fd').value,r=$('fr').checked,u=r?$('fx').value:'';
   if(!t||!d){$('fe').textContent='Inserisci almeno cosa e data.';return false}
   if(u&&u<d){$('fe').textContent='La data finale deve essere dopo la data iniziale.';return false}
-  var o={title:t,date:d,time:$('fo').value,cat:$('fc').value,notes:$('fn').value.trim(),rec:r,until:u};
+  var o={kid:$('fk').value,title:t,date:d,time:$('fo').value,cat:$('fc').value,notes:$('fn').value.trim(),rec:r,until:u};
   if(id){var x=S.events.find(function(y){return y.id==id});Object.assign(x,o);S.ack={}}else{o.id=uid();o.done=false;o.created=Date.now();S.events.push(o)}
   save();askNotif();render()},id?'Salva modifiche':'Aggiungi')}
 function delEv(id){dlg('Eliminare questo evento?',function(){S.events=S.events.filter(function(e){return e.id!=id});save();render()},'Elimina')}
@@ -117,7 +132,7 @@ function gcal(id){var e=S.events.find(function(x){return x.id==id});if(!e)return
  var d=nextOcc(e),dates,url;
  if(e.time){var s=startMs(d,e.time);dates=loc(s)+'/'+loc(s+36e5)}
  else{dates=d.replace(/-/g,'')+'/'+addDays(d,1).replace(/-/g,'')}
- url='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(e.title)+'&dates='+dates+'&details='+encodeURIComponent((e.cat||'')+(e.notes?' · '+e.notes:''));
+ url='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent((e.kid&&kidName(e.kid)?kidName(e.kid)+': ':'')+e.title)+'&dates='+dates+'&details='+encodeURIComponent((e.cat||'')+(e.notes?' · '+e.notes:''));
  if(e.rec)url+='&recur='+encodeURIComponent('RRULE:FREQ=WEEKLY'+(e.until?';UNTIL='+e.until.replace(/-/g,'')+'T235959Z':''));
  try{var a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}catch(x){location.href=url}}
 
@@ -129,32 +144,36 @@ function dueList(){var now=Date.now(),out=[];S.events.forEach(function(e){if(e.d
  if(!S.ack[k]&&now>=s-36e5&&now<s+18e5)out.push({e:e,d:d,s:s,k:k})});return out}
 function ack(k){S.ack[k]=1;var n=Date.now()-7*864e5;for(var x in S.ack){var dd=x.split('|')[1];if(dd&&pd(dd).getTime()<n)delete S.ack[x]}save();render()}
 function checkNotif(){var fresh=false;dueList().forEach(function(d){if(!beeped[d.k]){beeped[d.k]=1;fresh=true;
- try{if('Notification' in window&&Notification.permission==='granted')notify(d.e.title,(d.s>Date.now()?'Tra '+Math.max(1,Math.round((d.s-Date.now())/6e4))+' min':'Adesso')+' · '+hm(d.s))}catch(e){}}});
+ try{if('Notification' in window&&Notification.permission==='granted')notify((d.e.kid&&kidName(d.e.kid)?kidName(d.e.kid)+': ':'')+d.e.title,(d.s>Date.now()?'Tra '+Math.max(1,Math.round((d.s-Date.now())/6e4))+' min':'Adesso')+' · '+hm(d.s))}catch(e){}}});
  if(fresh){beep();render()}}
 setInterval(function(){checkNotif();if(!$('dlg').innerHTML&&!(document.activeElement&&document.activeElement.matches&&document.activeElement.matches('input,select,textarea')))render()},15000);
 
 /* viste */
 function renderAlerts(){var h=storeOK?'':'<div class="al" role="alert"><b>Salvataggio non disponibile</b>Il browser non permette di salvare i dati: usa «Backup dati» per non perderli.</div>';
- dueList().forEach(function(d){var m=Math.round((d.s-Date.now())/6e4);h+='<div class="al" role="alert"><b>'+esc(d.e.title)+'</b>'+(m>0?'Inizia tra '+m+' min':'È iniziato')+' (alle '+hm(d.s)+')'+(d.e.notes?' · '+esc(d.e.notes):'')+'<div class="g2"><button onclick="gcal(\''+d.e.id+'\')">Calendario</button><button onclick="ack(\''+esc(d.k)+'\')">Ok</button></div></div>'});
+ dueList().forEach(function(d){var m=Math.round((d.s-Date.now())/6e4);h+='<div class="al" role="alert"><b>'+(d.e.kid&&kidName(d.e.kid)?esc(kidName(d.e.kid))+': ':'')+esc(d.e.title)+'</b>'+(m>0?'Inizia tra '+m+' min':'È iniziato')+' (alle '+hm(d.s)+')'+(d.e.notes?' · '+esc(d.e.notes):'')+'<div class="g2"><button onclick="gcal(\''+d.e.id+'\')">Calendario</button><button onclick="ack(\''+esc(d.k)+'\')">Ok</button></div></div>'});
  $('alerts').innerHTML=h}
 function card(e){var t=today(),n=diffDays(e.d),past=e.done||e.d<t,lab=n===0?'Oggi':n===1?'Domani':(n>1&&n<=7?'Tra '+n+' giorni':''),dt=pd(e.d),
  wd=dt.toLocaleDateString('it-IT',{weekday:'long'}),
  rl=e.rec?'🔁 ogni '+wd+(e.until?' fino al '+pd(e.until).toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'}):' (senza fine)'):'';
  return '<div class="card ev'+(past?' done':'')+'"><div class="d">'+dt.toLocaleDateString('it-IT',{month:'short'})+'<b>'+dt.getDate()+'</b>'+dt.toLocaleDateString('it-IT',{weekday:'short'})+'</div><div style="flex:1;min-width:0">'
- +'<div class="t">'+esc(e.title)+'</div><div class="mut"><span class="tag">'+esc(e.cat)+'</span>'+(e.time?'🕒 '+esc(e.time)+' ':'')+(lab&&!e.done?'<span class="soon">'+lab+'</span>':'')+'</div>'
+ +'<div class="t">'+esc(e.title)+'</div><div class="mut">'+(e.kid&&kidName(e.kid)?'<span class="tag k">'+esc(kidName(e.kid))+'</span>':'')+'<span class="tag">'+esc(e.cat)+'</span>'+(e.time?'🕒 '+esc(e.time)+' ':'')+(lab&&!e.done?'<span class="soon">'+lab+'</span>':'')+'</div>'
  +(rl?'<div class="mut">'+esc(rl)+'</div>':'')+(e.notes?'<div class="mut">'+esc(e.notes)+'</div>':'')
  +'<div class="act"><button class="btn sm" onclick="toggleDone(\''+e.id+'\')">'+(e.done?'↩︎ Riapri':(e.rec?'✓ Termina':'✓ Fatto'))+'</button><button class="btn ghost sm" onclick="gcal(\''+e.id+'\')">Aggiungi al Calendario</button>'
  +'<button class="btn ghost sm" onclick="evForm(\''+e.id+'\')">Modifica</button><button class="btn ghost sm" onclick="delEv(\''+e.id+'\')" aria-label="Elimina">Elimina</button></div></div></div>'}
 function render(){renderAlerts();
- var ch='<button class="chip'+(flt?'':' on')+'" onclick="flt=\'\';render()">Tutti</button>';
+ if(kflt&&!S.kids.some(function(k){return k.id==kflt}))kflt='';
+ var kh='<button class="chip'+(kflt?'':' on')+'" onclick="kflt=\'\';render()">Tutti</button>';
+ S.kids.forEach(function(k){kh+='<button class="chip'+(k.id==kflt?' on':'')+'" onclick="kflt=\''+k.id+'\';render()">'+esc(k.name)+'</button>'});
+ $('kids').innerHTML=kh+'<button class="chip" onclick="addKid()">+ Bambino</button>';
+ var ch='<button class="chip'+(flt?'':' on')+'" onclick="flt=\'\';render()">Tutte</button>';
  CATS.forEach(function(c,i){ch+='<button class="chip'+(flt===c?' on':'')+'" onclick="flt=CATS['+i+'];render()">'+c+'</button>'});$('cats').innerHTML=ch;
  var T={prossimi:'Prossimi',passati:'Passati / fatti'},th='';for(var k in T)th+='<button class="tab'+(k==tab?' on':'')+'" onclick="tab=\''+k+'\';render()">'+T[k]+'</button>';$('tabs').innerHTML=th;
- var t=today(),L=S.events.filter(function(e){return !flt||e.cat===flt}).map(function(e){var o=Object.assign({},e);o.d=nextOcc(e);return o}),
+ var t=today(),L=S.events.filter(function(e){return (!flt||e.cat===flt)&&(!kflt||e.kid===kflt||!e.kid)}).map(function(e){var o=Object.assign({},e);o.d=nextOcc(e);return o}),
  key=function(e){return e.d+(e.time||'')},
  up=L.filter(function(e){return !e.done&&e.d>=t}).sort(function(a,b){return key(a)<key(b)?-1:1}),
  pa=L.filter(function(e){return e.done||e.d<t}).sort(function(a,b){return key(a)<key(b)?1:-1}),
  list=tab=='prossimi'?up:pa;
- $('view').innerHTML='<button class="btn" onclick="evForm()">+ Aggiungi evento</button>'+(list.length?list.map(card).join(''):'<p class="mut">'+(tab=='prossimi'?'Nessun evento in programma.':'Nessun evento passato o completato.')+'</p>')+'<button class="btn ghost" onclick="backup()" style="margin-top:24px">Backup dati</button>'}
+ $('view').innerHTML=(kflt?'<div class="row mut" style="margin:4px 0"><span>Eventi di <b>'+esc(kidName(kflt))+'</b> e di tutti i bambini</span><button class="btn ghost sm" onclick="editKid(\''+kflt+'\')">Modifica</button></div>':'')+(S.kids.length?'':'<p class="mut">Aggiungi i tuoi bambini con «+ Bambino» per scegliere a chi appartiene ogni evento.</p>')+'<button class="btn" onclick="evForm()">+ Aggiungi evento</button>'+(list.length?list.map(card).join(''):'<p class="mut">'+(tab=='prossimi'?'Nessun evento in programma.':'Nessun evento passato o completato.')+'</p>')+'<button class="btn ghost" onclick="backup()" style="margin-top:24px">Backup dati</button>'}
 render();checkNotif();
 try{if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')}catch(e){}
 </script>
