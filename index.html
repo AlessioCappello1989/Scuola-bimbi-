@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2f6fed">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Agenda Famiglia</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1f2328;--mut:#6b7280;--acc:#2f6fed;--accink:#fff;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--line:#e0e2e6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15171a;--card:#1f2226;--ink:#eceff3;--mut:#9aa3ae;--acc:#6b9bff;--accink:#0b1220;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--line:#2d3238}}
+:root[data-theme="dark"]{--bg:#15171a;--card:#1f2226;--ink:#eceff3;--mut:#9aa3ae;--acc:#6b9bff;--accink:#0b1220;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--line:#2d3238}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;max-width:560px;margin:auto;padding:14px 14px 90px}
+h1{font-size:1.35rem;margin:4px 0 10px}
+h2{font-size:1.05rem;margin:18px 0 8px}
+.kids,.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+button,input,select,textarea{font:inherit;color:inherit}
+.chip,.tab{border:1.5px solid var(--line);background:var(--card);border-radius:20px;padding:7px 14px;white-space:nowrap;cursor:pointer}
+.chip.on,.tab.on{background:var(--acc);color:var(--accink);border-color:var(--acc);font-weight:700}
+.tabs{margin:10px 0}
+.tab{border-radius:10px;flex:1;text-align:center;padding:7px 2px;font-size:.92rem}
+.al{background:var(--warn);color:#fff;border-radius:14px;padding:12px;margin:6px 0 10px}.al b{display:block;font-size:1.05rem}.al .g2{margin-top:8px}.al button{background:#fff;color:#7c2d12;border:0;border-radius:10px;padding:9px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}
+.card.done{opacity:.55}.card.done .t{text-decoration:line-through}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ev{display:flex;gap:10px;align-items:flex-start}
+.d{min-width:54px;text-align:center;border-radius:10px;background:var(--bg);padding:6px 4px;font-size:.8rem}.d b{display:block;font-size:1.25rem}
+.t{font-weight:700}
+.mut{color:var(--mut);font-size:.88rem}
+.tag{display:inline-block;font-size:.75rem;border:1px solid var(--line);border-radius:20px;padding:1px 8px;margin-right:4px}
+.soon{color:var(--warn);font-weight:700}
+.btn{background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer;width:100%;margin-top:8px}
+.btn.sm{width:auto;padding:6px 10px;margin:0;font-size:.85rem}
+.btn.ghost{background:transparent;color:var(--mut);border:1px solid var(--line);font-weight:400}
+input,select,textarea{width:100%;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);margin:4px 0}
+input[type=checkbox]{width:auto;margin:0 8px 0 0}
+label{font-size:.85rem;color:var(--mut)}
+label.c{display:flex;align-items:center;margin:8px 0;font-size:.95rem;color:var(--ink)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.act{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.note{font-size:.8rem;color:var(--mut);border-left:3px solid var(--warn);padding-left:8px;margin:12px 0}
+.tip{border-left-color:var(--acc)}.tip b{color:var(--ink)}
+.bad{color:var(--bad)}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.mb{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9;overflow:auto}.mc{background:var(--card);border-radius:14px;padding:16px;width:100%;max-width:400px;max-height:100%;overflow:auto}
+.mc b{display:block;margin-bottom:6px}.mc label{display:block}
+</style>
+</head>
+<body>
+<h1>📅 Agenda Famiglia</h1>
+<div id="alerts"></div>
+<div class="kids" id="cats"></div>
+<div class="tabs" id="tabs"></div>
+<div id="view"></div>
+<div id="dlg"></div>
+<p class="note">Le notifiche arrivano solo con la pagina aperta; per un promemoria preciso, anche ad app chiusa, usa «Aggiungi al Calendario».</p>
+<div class="note tip"><b>Come non perdere i dati</b><br>I dati sono salvati solo su questo telefono, nel browser. Quando cancelli i dati di navigazione (Chrome: Impostazioni, Privacy e sicurezza, Elimina dati di navigazione), <b>togli la spunta da «Cookie e dati dei siti»</b>: se la lasci attiva, il browser cancella tutti gli eventi salvati nell'app.<br>Per sicurezza, salva ogni tanto un backup: premi «Backup dati», copia il testo e incollalo in un blocco note. Per avere gli stessi eventi sul telefono di tuo marito/tua moglie, incolla lo stesso testo di backup anche lì.</div>
+<script>
+var CATS=['🏫 Scuola','🚌 Gita','⚽ Sport','📌 Altro'];
+var S={events:[],ack:{}},tab='prossimi',flt='',storeOK=true,beeped={};
+try{var raw=localStorage.getItem('agf');if(raw){var p=JSON.parse(raw);if(p&&p.events)S={events:p.events,ack:p.ack||{}}}}catch(e){}
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+function save(){try{localStorage.setItem('agf',JSON.stringify(S));storeOK=true}catch(e){storeOK=false}}
+function $(i){return document.getElementById(i)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
+function z(n){return(n<10?'0':'')+n}
+function ymd(d){return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())}
+function pd(s){var a=s.split('-');return new Date(+a[0],+a[1]-1,+a[2])}
+function addDays(s,n){var d=pd(s);d.setDate(d.getDate()+n);return ymd(d)}
+function today(){return ymd(new Date())}
+function diffDays(s){return Math.round((pd(s)-pd(today()))/864e5)}
+function hm(t){return new Date(t).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}
+function startMs(date,time){var d=pd(date);if(time){var a=time.split(':');d.setHours(+a[0],+a[1],0,0)}else d.setHours(9,0,0,0);return d.getTime()}
+
+/* ricorrenza settimanale */
+function nextOcc(e,from){from=from||today();if(!e.rec)return e.date;var w=pd(e.date).getDay(),d=e.date>from?e.date:from;
+ while(pd(d).getDay()!==w)d=addDays(d,1);
+ if(e.until&&d>e.until){d=e.until;while(pd(d).getDay()!==w)d=addDays(d,-1)}return d}
+
+/* dialoghi (come nell'app farmaci) */
+function closeDlg(){$('dlg').innerHTML=''}
+function dlg(html,ok,label,noCancel){$('dlg').innerHTML='<div class="mb"><div class="mc"><div>'+html+'</div><div class="g2">'+(noCancel?'':'<button class="btn ghost" id="dn">Annulla</button>')+'<button class="btn" id="dy">'+(label||'Conferma')+'</button></div></div></div>';
+ if(!noCancel)$('dn').onclick=closeDlg;$('dy').onclick=function(){var x=ok?ok():0;if(x!==false)closeDlg()}}
+function info(m){dlg(esc(m),null,'OK',1)}
+
+/* backup */
+function backup(){var j=JSON.stringify({events:S.events});
+ dlg('<b>Backup dati</b><p class="mut">Copia questo testo e conservalo (ad esempio nelle note). Per ripristinare, o per avere gli stessi eventi su un altro telefono, incollalo qui sotto al posto di questo testo e premi «Ripristina».</p><textarea id="bk" rows="6" style="font-size:.75rem">'+esc(j)+'</textarea><button class="btn ghost" onclick="var t=$(\'bk\');t.select();try{navigator.clipboard.writeText(t.value)}catch(e){try{document.execCommand(\'copy\')}catch(x){}}this.textContent=\'Copiato\'">Copia testo</button>',
+ function(){try{var d=JSON.parse($('bk').value);if(!d||!Array.isArray(d.events))throw 0;S={events:d.events,ack:{}};save();render()}catch(e){info('Testo di backup non valido.');return false}},'Ripristina')}
+
+/* eventi */
+function evForm(id){var e=S.events.find(function(x){return x.id==id})||{title:'',date:today(),time:'',cat:CATS[0],notes:'',rec:false,until:''};
+ dlg('<b>'+(id?'Modifica evento':'Nuovo evento')+'</b><label>Cosa</label><input id="ft" maxlength="120" placeholder="Es. Assemblea di classe" autocomplete="off" value="'+esc(e.title)+'">'
+ +'<div class="g2"><div><label>Data</label><input id="fd" type="date" value="'+esc(e.date)+'"></div><div><label>Ora (facoltativa)</label><input id="fo" type="time" value="'+esc(e.time||'')+'"></div></div>'
+ +'<label>Categoria</label><select id="fc">'+CATS.map(function(c){return '<option'+(c==e.cat?' selected':'')+'>'+c+'</option>'}).join('')+'</select>'
+ +'<label class="c"><input type="checkbox" id="fr"'+(e.rec?' checked':'')+' onchange="$(\'fu\').style.display=this.checked?\'block\':\'none\'">🔁 Si ripete ogni settimana (stesso giorno)</label>'
+ +'<div id="fu" style="display:'+(e.rec?'block':'none')+'"><label>Fino al (vuoto = senza fine)</label><input id="fx" type="date" value="'+esc(e.until||'')+'"></div>'
+ +'<label>Note (luogo, cosa portare, costo…)</label><textarea id="fn" rows="2" maxlength="500">'+esc(e.notes||'')+'</textarea><div class="bad" id="fe"></div>',
+ function(){var t=$('ft').value.trim(),d=$('fd').value,r=$('fr').checked,u=r?$('fx').value:'';
+  if(!t||!d){$('fe').textContent='Inserisci almeno cosa e data.';return false}
+  if(u&&u<d){$('fe').textContent='La data finale deve essere dopo la data iniziale.';return false}
+  var o={title:t,date:d,time:$('fo').value,cat:$('fc').value,notes:$('fn').value.trim(),rec:r,until:u};
+  if(id){var x=S.events.find(function(y){return y.id==id});Object.assign(x,o);S.ack={}}else{o.id=uid();o.done=false;o.created=Date.now();S.events.push(o)}
+  save();askNotif();render()},id?'Salva modifiche':'Aggiungi')}
+function delEv(id){dlg('Eliminare questo evento?',function(){S.events=S.events.filter(function(e){return e.id!=id});save();render()},'Elimina')}
+function toggleDone(id){var e=S.events.find(function(x){return x.id==id});if(!e)return;e.done=!e.done;save();render()}
+
+/* Google Calendar */
+function icsT(t){var d=new Date(t);return d.getUTCFullYear()+z(d.getUTCMonth()+1)+z(d.getUTCDate())+'T'+z(d.getUTCHours())+z(d.getUTCMinutes())+z(d.getUTCSeconds())+'Z'}
+function loc(t){var d=new Date(t);return d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'T'+z(d.getHours())+z(d.getMinutes())+'00'}
+function gcal(id){var e=S.events.find(function(x){return x.id==id});if(!e)return;
+ var d=nextOcc(e),dates,url;
+ if(e.time){var s=startMs(d,e.time);dates=loc(s)+'/'+loc(s+36e5)}
+ else{dates=d.replace(/-/g,'')+'/'+addDays(d,1).replace(/-/g,'')}
+ url='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(e.title)+'&dates='+dates+'&details='+encodeURIComponent((e.cat||'')+(e.notes?' · '+e.notes:''));
+ if(e.rec)url+='&recur='+encodeURIComponent('RRULE:FREQ=WEEKLY'+(e.until?';UNTIL='+e.until.replace(/-/g,'')+'T235959Z':''));
+ try{var a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}catch(x){location.href=url}}
+
+/* notifiche (pagina aperta) */
+function askNotif(){try{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()}catch(e){}}
+function beep(){try{var C=window.AudioContext||window.webkitAudioContext,c=new C(),i;for(i=0;i<3;i++){var o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=880;g.gain.value=.2;o.start(c.currentTime+i*.4);o.stop(c.currentTime+i*.4+.25)}}catch(e){}try{navigator.vibrate&&navigator.vibrate([300,150,300,150,300])}catch(e){}}
+function notify(t,b){try{navigator.serviceWorker.ready.then(function(r){r.showNotification(t,{body:b,icon:'icon-192.png',vibrate:[300,150,300],tag:t})})}catch(e){try{new Notification(t,{body:b})}catch(x){}}}
+function dueList(){var now=Date.now(),out=[];S.events.forEach(function(e){if(e.done||!e.time)return;var d=nextOcc(e),s=startMs(d,e.time),k=e.id+'|'+d;
+ if(!S.ack[k]&&now>=s-36e5&&now<s+18e5)out.push({e:e,d:d,s:s,k:k})});return out}
+function ack(k){S.ack[k]=1;var n=Date.now()-7*864e5;for(var x in S.ack){var dd=x.split('|')[1];if(dd&&pd(dd).getTime()<n)delete S.ack[x]}save();render()}
+function checkNotif(){var fresh=false;dueList().forEach(function(d){if(!beeped[d.k]){beeped[d.k]=1;fresh=true;
+ try{if('Notification' in window&&Notification.permission==='granted')notify(d.e.title,(d.s>Date.now()?'Tra '+Math.max(1,Math.round((d.s-Date.now())/6e4))+' min':'Adesso')+' · '+hm(d.s))}catch(e){}}});
+ if(fresh){beep();render()}}
+setInterval(function(){checkNotif();if(!$('dlg').innerHTML&&!(document.activeElement&&document.activeElement.matches&&document.activeElement.matches('input,select,textarea')))render()},15000);
+
+/* viste */
+function renderAlerts(){var h=storeOK?'':'<div class="al" role="alert"><b>Salvataggio non disponibile</b>Il browser non permette di salvare i dati: usa «Backup dati» per non perderli.</div>';
+ dueList().forEach(function(d){var m=Math.round((d.s-Date.now())/6e4);h+='<div class="al" role="alert"><b>'+esc(d.e.title)+'</b>'+(m>0?'Inizia tra '+m+' min':'È iniziato')+' (alle '+hm(d.s)+')'+(d.e.notes?' · '+esc(d.e.notes):'')+'<div class="g2"><button onclick="gcal(\''+d.e.id+'\')">Calendario</button><button onclick="ack(\''+esc(d.k)+'\')">Ok</button></div></div>'});
+ $('alerts').innerHTML=h}
+function card(e){var t=today(),n=diffDays(e.d),past=e.done||e.d<t,lab=n===0?'Oggi':n===1?'Domani':(n>1&&n<=7?'Tra '+n+' giorni':''),dt=pd(e.d),
+ wd=dt.toLocaleDateString('it-IT',{weekday:'long'}),
+ rl=e.rec?'🔁 ogni '+wd+(e.until?' fino al '+pd(e.until).toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'}):' (senza fine)'):'';
+ return '<div class="card ev'+(past?' done':'')+'"><div class="d">'+dt.toLocaleDateString('it-IT',{month:'short'})+'<b>'+dt.getDate()+'</b>'+dt.toLocaleDateString('it-IT',{weekday:'short'})+'</div><div style="flex:1;min-width:0">'
+ +'<div class="t">'+esc(e.title)+'</div><div class="mut"><span class="tag">'+esc(e.cat)+'</span>'+(e.time?'🕒 '+esc(e.time)+' ':'')+(lab&&!e.done?'<span class="soon">'+lab+'</span>':'')+'</div>'
+ +(rl?'<div class="mut">'+esc(rl)+'</div>':'')+(e.notes?'<div class="mut">'+esc(e.notes)+'</div>':'')
+ +'<div class="act"><button class="btn sm" onclick="toggleDone(\''+e.id+'\')">'+(e.done?'↩︎ Riapri':(e.rec?'✓ Termina':'✓ Fatto'))+'</button><button class="btn ghost sm" onclick="gcal(\''+e.id+'\')">Aggiungi al Calendario</button>'
+ +'<button class="btn ghost sm" onclick="evForm(\''+e.id+'\')">Modifica</button><button class="btn ghost sm" onclick="delEv(\''+e.id+'\')" aria-label="Elimina">Elimina</button></div></div></div>'}
+function render(){renderAlerts();
+ var ch='<button class="chip'+(flt?'':' on')+'" onclick="flt=\'\';render()">Tutti</button>';
+ CATS.forEach(function(c,i){ch+='<button class="chip'+(flt===c?' on':'')+'" onclick="flt=CATS['+i+'];render()">'+c+'</button>'});$('cats').innerHTML=ch;
+ var T={prossimi:'Prossimi',passati:'Passati / fatti'},th='';for(var k in T)th+='<button class="tab'+(k==tab?' on':'')+'" onclick="tab=\''+k+'\';render()">'+T[k]+'</button>';$('tabs').innerHTML=th;
+ var t=today(),L=S.events.filter(function(e){return !flt||e.cat===flt}).map(function(e){var o=Object.assign({},e);o.d=nextOcc(e);return o}),
+ key=function(e){return e.d+(e.time||'')},
+ up=L.filter(function(e){return !e.done&&e.d>=t}).sort(function(a,b){return key(a)<key(b)?-1:1}),
+ pa=L.filter(function(e){return e.done||e.d<t}).sort(function(a,b){return key(a)<key(b)?1:-1}),
+ list=tab=='prossimi'?up:pa;
+ $('view').innerHTML='<button class="btn" onclick="evForm()">+ Aggiungi evento</button>'+(list.length?list.map(card).join(''):'<p class="mut">'+(tab=='prossimi'?'Nessun evento in programma.':'Nessun evento passato o completato.')+'</p>')+'<button class="btn ghost" onclick="backup()" style="margin-top:24px">Backup dati</button>'}
+render();checkNotif();
+try{if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')}catch(e){}
+</script>
+</body>
+</html>
