@@ -1,1 +1,9 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.alessiocappello1989.twa",
+        "sha256_cert_fingerprints": ["97:A6:46:D9:20:9F:7C:E9:D2:05:80:B4:1E:97:4A:EF:C0:DF:93:6F:95:52:E1:43:84:FC:D2:46:8F:0A:45:66"]
+      }
+    }]
 
