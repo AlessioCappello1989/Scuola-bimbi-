@@ -1,5 +1,5 @@
-var C='agf-v1';
-self.addEventListener('install',function(e){self.skipWaiting()});
+var C='agf-v2',CORE=['./','index.html','manifest.json','icon-192.png','icon-512.png','icon-maskable-512.png','privacy.html'];
+self.addEventListener('install',function(e){e.waitUntil(caches.open(C).then(function(c){return Promise.all(CORE.map(function(u){return c.add(u).catch(function(){})}))}).then(function(){return self.skipWaiting()}))});
 self.addEventListener('activate',function(e){e.waitUntil(caches.keys().then(function(k){return Promise.all(k.filter(function(x){return x!==C&&x.indexOf('agf-')===0}).map(function(x){return caches.delete(x)}))}).then(function(){return clients.claim()}))});
 self.addEventListener('fetch',function(e){
  var u=new URL(e.request.url);

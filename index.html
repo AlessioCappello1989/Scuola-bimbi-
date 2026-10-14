@@ -61,6 +61,7 @@ label.c{display:flex;align-items:center;margin:8px 0;font-size:.95rem;color:var(
 <div id="dlg"></div>
 <p class="note">Le notifiche arrivano solo con la pagina aperta; per un promemoria preciso, anche ad app chiusa, usa «Aggiungi al Calendario».</p>
 <div class="note tip"><b>Come non perdere i dati</b><br>I dati sono salvati solo su questo telefono, nel browser. Quando cancelli i dati di navigazione (Chrome: Impostazioni, Privacy e sicurezza, Elimina dati di navigazione), <b>togli la spunta da «Cookie e dati dei siti»</b>: se la lasci attiva, il browser cancella tutti gli eventi salvati nell'app.<br>Per sicurezza, salva ogni tanto un backup: premi «Backup dati», copia il testo e incollalo in un blocco note. Per avere gli stessi eventi sul telefono di tuo marito/tua moglie, incolla lo stesso testo di backup anche lì.</div>
+<p class="note" style="border-left-color:var(--line)"><a href="privacy.html" style="color:var(--mut)">Informativa sulla privacy</a></p>
 <script>
 var CATS=['🏫 Scuola','🚌 Gita','⚽ Sport','📌 Altro'];
 var S={kids:[],events:[],ack:{}},tab='prossimi',flt='',kflt='',storeOK=true,beeped={};
@@ -91,9 +92,25 @@ function dlg(html,ok,label,noCancel){$('dlg').innerHTML='<div class="mb"><div cl
 function info(m){dlg(esc(m),null,'OK',1)}
 
 /* backup */
-function backup(){var j=JSON.stringify({kids:S.kids,events:S.events});
- dlg('<b>Backup dati</b><p class="mut">Copia questo testo e conservalo (ad esempio nelle note). Per ripristinare, o per avere gli stessi eventi su un altro telefono, incollalo qui sotto al posto di questo testo e premi «Ripristina».</p><textarea id="bk" rows="6" style="font-size:.75rem">'+esc(j)+'</textarea><button class="btn ghost" onclick="var t=$(\'bk\');t.select();try{navigator.clipboard.writeText(t.value)}catch(e){try{document.execCommand(\'copy\')}catch(x){}}this.textContent=\'Copiato\'">Copia testo</button>',
- function(){try{var d=JSON.parse($('bk').value);if(!d||!Array.isArray(d.events))throw 0;S={kids:Array.isArray(d.kids)?d.kids:[],events:d.events,ack:{}};kflt='';save();render()}catch(e){info('Testo di backup non valido.');return false}},'Ripristina')}
+function backupText(){return JSON.stringify({kids:S.kids,events:S.events})}
+function openUrl(url){try{var a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}catch(e){location.href=url}}
+function backup(){
+ dlg('<b>Backup dati</b><p class="mut">Copia questo testo e conservalo (ad esempio nelle note). Per ripristinarlo usa «Ripristina backup».</p><textarea id="bk" rows="6" readonly style="font-size:.75rem">'+esc(backupText())+'</textarea><button class="btn ghost" onclick="var t=$(\'bk\');t.select();try{navigator.clipboard.writeText(t.value)}catch(e){try{document.execCommand(\'copy\')}catch(x){}}this.textContent=\'Copiato\'">Copia testo</button>',null,'Chiudi',1)}
+function emailBackup(){var j=backupText(),d=new Date().toLocaleDateString('it-IT'),subj='Backup Agenda Famiglia '+d,
+ body='Backup di Agenda Famiglia del '+d+'.\nPer ripristinarlo: apri l\'app, premi «Ripristina backup» e incolla qui tutto il testo sotto la riga.\n----------\n'+j,
+ url='mailto:?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
+ if(url.length<=20000){openUrl(url);return}
+ /* troppi dati per una mail precompilata: condivido come file, altrimenti mostro il testo da copiare */
+ try{var f=new File([j],'agenda-famiglia-backup.json',{type:'application/json'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:subj,text:subj}).catch(function(){});return}}catch(e){}
+ info('Il backup è troppo grande per una email precompilata: usa «Backup dati», copia il testo e incollalo in una email o nelle note.')}
+function parseBackup(t){var a=t.indexOf('{'),b=t.lastIndexOf('}');if(a<0||b<=a)return null;try{var d=JSON.parse(t.slice(a,b+1));return d&&Array.isArray(d.events)?d:null}catch(e){return null}}
+function restoreDlg(){
+ dlg('<b>Ripristina backup</b><p class="mut">Incolla qui il testo del backup (anche l\'intera email) oppure scegli il file di backup. <b>Gli eventi e i bambini attuali verranno sostituiti.</b></p><textarea id="rb" rows="6" placeholder="Incolla il backup" style="font-size:.75rem"></textarea><label>…oppure scegli un file</label><input id="rf" type="file" accept=".json,.txt,application/json,text/plain"><div class="bad" id="re"></div>',
+ function(){var d=parseBackup($('rb').value);if(!d){$('re').textContent='Testo di backup non valido.';return false}
+  S={kids:Array.isArray(d.kids)?d.kids:[],events:d.events,ack:{}};kflt='';save();render();var n=S.events.length;setTimeout(function(){info('Backup ripristinato: '+n+' eventi.')},0)},'Ripristina');
+ $('rf').onchange=function(){var f=this.files&&this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){$('rb').value=String(r.result||'')};r.readAsText(f)}}
+function delKidSel(){if(!kflt||!kidName(kflt)){info('Seleziona prima un bambino con i pulsanti in alto, poi premi «Elimina questo bambino».');return}delKid(kflt)}
 
 /* bambini */
 function kidName(id){var k=S.kids.find(function(x){return x.id==id});return k?k.name:''}
@@ -134,7 +151,7 @@ function gcal(id){var e=S.events.find(function(x){return x.id==id});if(!e)return
  else{dates=d.replace(/-/g,'')+'/'+addDays(d,1).replace(/-/g,'')}
  url='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent((e.kid&&kidName(e.kid)?kidName(e.kid)+': ':'')+e.title)+'&dates='+dates+'&details='+encodeURIComponent((e.cat||'')+(e.notes?' · '+e.notes:''));
  if(e.rec)url+='&recur='+encodeURIComponent('RRULE:FREQ=WEEKLY'+(e.until?';UNTIL='+e.until.replace(/-/g,'')+'T235959Z':''));
- try{var a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}catch(x){location.href=url}}
+ openUrl(url)}
 
 /* notifiche (pagina aperta) */
 function askNotif(){try{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()}catch(e){}}
@@ -173,8 +190,9 @@ function render(){renderAlerts();
  up=L.filter(function(e){return !e.done&&e.d>=t}).sort(function(a,b){return key(a)<key(b)?-1:1}),
  pa=L.filter(function(e){return e.done||e.d<t}).sort(function(a,b){return key(a)<key(b)?1:-1}),
  list=tab=='prossimi'?up:pa;
- $('view').innerHTML=(kflt?'<div class="row mut" style="margin:4px 0"><span>Eventi di <b>'+esc(kidName(kflt))+'</b> e di tutti i bambini</span><button class="btn ghost sm" onclick="editKid(\''+kflt+'\')">Modifica</button></div>':'')+(S.kids.length?'':'<p class="mut">Aggiungi i tuoi bambini con «+ Bambino» per scegliere a chi appartiene ogni evento.</p>')+'<button class="btn" onclick="evForm()">+ Aggiungi evento</button>'+(list.length?list.map(card).join(''):'<p class="mut">'+(tab=='prossimi'?'Nessun evento in programma.':'Nessun evento passato o completato.')+'</p>')+'<button class="btn ghost" onclick="backup()" style="margin-top:24px">Backup dati</button>'}
+ $('view').innerHTML=(kflt?'<div class="row mut" style="margin:4px 0"><span>Eventi di <b>'+esc(kidName(kflt))+'</b> e di tutti i bambini</span><button class="btn ghost sm" onclick="editKid(\''+kflt+'\')">Modifica</button></div>':'')+(S.kids.length?'':'<p class="mut">Aggiungi i tuoi bambini con «+ Bambino» per scegliere a chi appartiene ogni evento.</p>')+'<button class="btn" onclick="evForm()">+ Aggiungi evento</button>'+(list.length?list.map(card).join(''):'<p class="mut">'+(tab=='prossimi'?'Nessun evento in programma.':'Nessun evento passato o completato.')+'</p>')+'<div style="margin-top:24px"><button class="btn ghost" onclick="backup()">Backup dati</button><button class="btn ghost" onclick="emailBackup()">Invia backup via email</button><button class="btn ghost" onclick="restoreDlg()">Ripristina backup</button><button class="btn ghost" onclick="delKidSel()">Elimina questo bambino</button></div>'}
 render();checkNotif();
+try{if(/[?&]new=1/.test(location.search)){history.replaceState(null,'',location.pathname);evForm()}}catch(e){}
 try{if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')}catch(e){}
 </script>
 </body>
